@@ -10,8 +10,21 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 0) do
+ActiveRecord::Schema[7.2].define(version: 2026_06_18_104039) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
+  create_table "users", force: :cascade do |t|
+    t.string "name", null: false
+    t.string "surname", null: false
+    t.string "email", null: false
+    t.string "username", null: false
+    t.string "password", null: false
+    t.string "role", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["username"], name: "index_users_on_username", unique: true
+    t.check_constraint "role::text = ANY (ARRAY['admin'::character varying, 'manager'::character varying]::text[])", name: "users_role_check"
+  end
 end
