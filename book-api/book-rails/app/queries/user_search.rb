@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class UsersQuery
+class UserSearch
   FILTERABLE_FIELDS = %w[name surname email username role].freeze
 
   def self.build(fetch_relation, params)
