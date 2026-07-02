@@ -10,9 +10,7 @@ class UserSearch
     sort(records, params[:sort])
   end
 
-  private
-
-  def self.filter(records, params)
+  private_class_method def self.filter(records, params)
     FILTERABLE_FIELDS.each do |field|
       next unless params[field].present?
 
@@ -21,19 +19,28 @@ class UserSearch
     records
   end
 
-  def self.sort(records, sort_by)
-    return records.order(id: :asc) if sort_by.blank?
+  private_class_method def self.sort(records, sort_raw)
+    return records.order(id: :asc) if sort_raw.blank?
 
-    field, direction, extra = sort_by.to_s.split(",")
-    field = field&.downcase
-    direction = direction&.downcase
+    sort_by = parse_sort(sort_raw)
+    records.order(sort_by)
+  end
 
-    # TODO: move validation to ApplicationController
-    raise InvalidSortError, "Sort must be in format `<field>,<direction>" if field.blank? || direction.blank? || extra
-    raise InvalidSortError, "invalid sort field '#{field}'" unless SORTABLE_FIELDS.include?(field)
-    raise InvalidSortError, "Invalid sort direction '#{direction}'" unless SORT_DIRECTIONS.include?(direction)
+  # TODO: move validation to ApplicationController
+  private_class_method def self.parse_sort(sort_raw)
+    # Array(elem) return [elem] if elem is not array else return elem
+    Array(sort_raw).each_with_object({}) do |sort_by, hash|
+      field, direction, extra = sort_by.to_s.split(",")
+      field = field&.downcase
+      direction = direction&.downcase
 
-    records.order(field => direction)
+      raise InvalidSortError, "Sort must be in format `<field>,<direction>" if field.blank? || direction.blank? || extra
+      raise InvalidSortError, "invalid sort field '#{field}'" unless SORTABLE_FIELDS.include?(field)
+      raise InvalidSortError, "Invalid sort direction '#{direction}'" unless SORT_DIRECTIONS.include?(direction)
+      raise InvalidSortError, "Duplicate sort field '#{field}'" if hash.key?(field)
+
+      hash[field] = direction
+    end
   end
 
   class InvalidSortError < StandardError; end
