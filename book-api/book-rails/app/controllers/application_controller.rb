@@ -7,18 +7,25 @@ class ApplicationController < ActionController::API
 
   protected
 
-  def validate_sort_type
-    query = request.query_string
+  def parse_sort
+    # Array(elem) return [elem] if elem is not array else return elem
+    Array(params[:sort]).each_with_object({}) do |sort_by, hash|
+      split = sort_by.split(",")
 
-    has_sort_string = query.match?(/(?:^|&)sort=/)
-    has_sort_array  = query.match?(/(?:^|&)sort%5B%5D=|(?:^|&)sort\[\]=/)
+      raise InvalidSortError, "Sort must be in format `<field>,<direction>" unless split.length == 2
 
-    if has_sort_string && has_sort_array
-      raise ActionController::BadRequest, "Invalid query parameters: cannot mix Array and String for param `sort'"
-    elsif has_sort_string
-      raise ActionController::BadRequest, "Invalid query parameters: expected Array (got String) for param `sort'"
+      field, direction = split
+      field = field&.downcase
+      direction = direction&.downcase
+
+      raise InvalidSortError, "Sort must be in format `<field>,<direction>" if field.blank? || direction.blank?
+      raise InvalidSortError, "Duplicate sort field '#{field}'" if hash.key?(field)
+
+      hash[field] = direction
     end
   end
+
+  class InvalidSortError < StandardError; end
 
   def get_page
     page = params.fetch(:page, DEFAULT_PAGE).to_i
@@ -54,5 +61,20 @@ class ApplicationController < ActionController::API
       total_elements: record_count,
       total_pages: (record_count.to_f / size).ceil,
     }
+  end
+
+  private
+
+  def validate_sort_type
+    query = request.query_string
+
+    has_sort_string = query.match?(/(?:^|&)sort=/)
+    has_sort_array  = query.match?(/(?:^|&)sort%5B%5D=|(?:^|&)sort\[\]=/)
+
+    if has_sort_string && has_sort_array
+      raise ActionController::BadRequest, "Invalid query parameters: cannot mix Array and String for param `sort'"
+    elsif has_sort_string
+      raise ActionController::BadRequest, "Invalid query parameters: expected Array (got String) for param `sort'"
+    end
   end
 end
